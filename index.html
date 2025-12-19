@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connections TR</title>
+  <style>
+    :root{
+      --bg:#ffffff; --text:#151515;
+      --tile:#f1f1ed; --tileSel:#cfcfca; --border:#b5b5ae; --black:#111111;
+      --yellow:#f4de73; --green:#a8c26f; --blue:#b2c7ee; --purple:#b189c8;
+      --gap:18px; --tileH:78px; --barH:86px;
+      --radius:14px;
+      --ease:cubic-bezier(.2,.8,.2,1);
+    }
+    *{box-sizing:border-box; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    body{margin:0; background:var(--bg); color:var(--text);}
+    .wrap{width:min(880px, calc(100vw - 24px)); margin:18px auto;}
+    .title{font-size:20px; text-align:center; margin: 6px 0 2px;}
+    .msg{font-size:22px; font-weight:900; text-align:center; height:30px; margin: 8px 0 10px;}
+
+    .bars{display:flex; flex-direction:column; gap:14px; margin: 8px 0 16px;}
+    .bar{
+      height:var(--barH); border-radius:var(--radius);
+      display:none; align-items:center; justify-content:center; flex-direction:column;
+    }
+    .barTitle{font-weight:900; font-size:22px; line-height:1.05; margin-top:8px;}
+    .barWords{font-size:18px; line-height:1.1; margin-bottom:10px;}
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--gap);
+      margin-bottom: 14px;
+    }
+    .tile{
+      height:var(--tileH);
+      border-radius:var(--radius);
+      background:var(--tile);
+      border:2px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:18px;
+      cursor:pointer; user-select:none;
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .tile.selected{ background:var(--tileSel); border:4px solid var(--tileSel); }
+    .tile.locked{ display:none; } /* grid reflow = automatic */
+
+    .mist{ text-align:center; margin: 6px 0 10px; font-size:14px; color:#404040;}
+    .dots{display:flex; justify-content:center; gap:10px; margin-top:6px;}
+    .dot{font-size:22px; line-height:22px; color:#000;}
+    .dot.off{color:#e0e0e0;}
+
+    .btnrow{display:flex; justify-content:center; gap:26px; margin-top: 10px; flex-wrap:wrap;}
+    .btn{
+      width:190px; height:56px; border-radius:18px;
+      border:2px solid var(--black); background:#fff;
+      font-weight:900; font-size:16px; cursor:pointer;
+    }
+    .btn:active{background:#f0f0f0}
+    .btn:disabled{opacity:.5; cursor:not-allowed}
+
+    /* Ghost layer */
+    .ghostLayer{position:relative; height:0;}
+    .ghost{
+      position:absolute;
+      width: calc((min(880px, calc(100vw - 24px)) - 3*var(--gap))/4);
+      height: var(--tileH);
+      border-radius: var(--radius);
+      background: var(--tileSel);
+      border:4px solid var(--tileSel);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; font-size:18px;
+      transform: translate(0,0);
+      transition: transform 520ms var(--ease);
+      pointer-events:none;
+    }
+
+    /* Mobile tweak */
+    @media (max-width: 560px){
+      .grid{grid-template-columns: repeat(2, 1fr);}
+      .ghost{width: calc((min(880px, calc(100vw - 24px)) - 1*var(--gap))/2);}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="title">Create four groups of four!</div>
+    <div id="msg" class="msg"></div>
+
+    <div id="bars" class="bars"></div>
+
+    <div id="grid" class="grid"></div>
+
+    <div class="mist">Mistakes Remaining:
+      <div class="dots" id="dots"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn" id="shuffle">Shuffle</button>
+      <button class="btn" id="submit">Submit</button>
+      <button class="btn" id="clear">Deselect All</button>
+    </div>
+
+    <div class="ghostLayer" id="ghostLayer"></div>
+  </div>
+
+<script>
+(() => {
+  // ---------- Puzzle (şimdilik hard-coded) ----------
+  const COLORS = {
+    yellow: getCss('--yellow'), green: getCss('--green'),
+    blue: getCss('--blue'), purple: getCss('--purple')
+  };
+
+  const puzzle = {
+    words: ["GÖZ","EL","DİL","YÜZ","MANTI","BÖREK","PİDE","LAHMACUN","YAZ","YAZAR","YAZI","YAZMAK","KAR","KOR","KIL","KAL"],
+    groups: [
+      {label:"VÜCUT/ORGAN", items:["GÖZ","EL","DİL","YÜZ"], color: COLORS.yellow},
+      {label:"HAMUR İŞİ",   items:["MANTI","BÖREK","PİDE","LAHMACUN"], color: COLORS.green},
+      {label:"YAZ- KÖKÜ",   items:["YAZ","YAZAR","YAZI","YAZMAK"], color: COLORS.blue},
+      {label:"K_ R / K_ L", items:["KAR","KOR","KIL","KAL"], color: COLORS.purple},
+    ]
+  };
+
+  // ---------- State ----------
+  let mistakesLeft = 4;
+  let selected = new Set();      // Set<HTMLElement tile>
+  let found = [false,false,false,false];
+  let barSlot = 0;
+  let animating = false;
+
+  const msgEl = el('#msg');
+  const gridEl = el('#grid');
+  const barsEl = el('#bars');
+  const dotsEl = el('#dots');
+  const ghostLayer = el('#ghostLayer');
+
+  const btnShuffle = el('#shuffle');
+  const btnSubmit  = el('#submit');
+  const btnClear   = el('#clear');
+
+  // ---------- Init ----------
+  renderBars();
+  renderDots();
+  renderGrid(shuffle([...puzzle.words]));
+
+  btnShuffle.onclick = () => !animating && shuffleOpen();
+  btnClear.onclick   = () => !animating && clearSelection();
+  btnSubmit.onclick  = () => !animating && submit();
+
+  // ---------- Rendering ----------
+  function renderBars(){
+    barsEl.innerHTML = "";
+    for(let i=0;i<4;i++){
+      const b = document.createElement('div');
+      b.className = "bar";
+      b.id = `bar-${i}`;
+      b.innerHTML = `<div class="barTitle"></div><div class="barWords"></div>`;
+      barsEl.appendChild(b);
+    }
+  }
+
+  function renderDots(){
+    dotsEl.innerHTML = "";
+    for(let i=0;i<4;i++){
+      const d = document.createElement('div');
+      d.className = "dot" + (i < mistakesLeft ? "" : " off");
+      d.textContent = "●";
+      dotsEl.appendChild(d);
+    }
+  }
+
+  function renderGrid(words){
+    gridEl.innerHTML = "";
+    words.forEach((w) => {
+      const t = document.createElement('div');
+      t.className = "tile";
+      t.dataset.word = w;
+      t.textContent = w;
+      t.onclick = () => {
+        if(animating) return;
+        if(t.classList.contains('locked')) return;
+        if(selected.has(t)){
+          selected.delete(t);
+          t.classList.remove('selected');
+        }else{
+          if(selected.size >= 4){ setMsg("En fazla 4 kelime seçebilirsin."); return; }
+          selected.add(t);
+          t.classList.add('selected');
+        }
+      };
+      gridEl.appendChild(t);
+    });
+  }
+
+  // ---------- Actions ----------
+  function setMsg(t){ msgEl.textContent = t || ""; }
+
+  function clearSelection(){
+    selected.forEach(t => t.classList.remove('selected'));
+    selected.clear();
+    setMsg("");
+  }
+
+  function shuffleOpen(){
+    const open = getOpenTiles();
+    const ws = open.map(t => t.dataset.word);
+    shuffle(ws);
+    open.forEach((t,i)=>{ t.dataset.word = ws[i]; t.textContent = ws[i]; t.classList.remove('selected'); });
+    selected.clear();
+    setMsg("Shuffled");
+  }
+
+  function submit(){
+    if(selected.size !== 4){ setMsg("4 kelime seç."); return; }
+
+    const selWords = [...selected].map(t => t.dataset.word).sort();
+    let hit = -1;
+    for(let i=0;i<puzzle.groups.length;i++){
+      if(found[i]) continue;
+      const target = puzzle.groups[i].items.map(x=>x.toUpperCase()).sort();
+      if(arrEq(selWords, target)){ hit = i; break; }
+    }
+
+    if(hit === -1){
+      mistakesLeft -= 1;
+      renderDots();
+      setMsg("Tekrar dene.");
+      if(mistakesLeft <= 0){
+        setMsg("Bitti.");
+        disableAll();
+      }
+      return;
+    }
+
+    setMsg("Doğru!");
+    animateSolve(hit, puzzle.groups[hit]);
+  }
+
+  function disableAll(){
+    btnShuffle.disabled = true;
+    btnSubmit.disabled  = true;
+    btnClear.disabled   = true;
+    getAllTiles().forEach(t => t.style.pointerEvents = "none");
+  }
+
+  // ---------- NYT-style animation ----------
+  async function animateSolve(groupIndex, groupDef){
+    animating = true;
+
+    const bar = el(`#bar-${barSlot}`);
+
+    // Selected tiles sorted by x (nice motion)
+    const selTiles = [...selected].sort((a,b)=> rect(a).left - rect(b).left);
+
+    // 1) Create ghosts at current positions (same size)
+    const ghosts = selTiles.map(t => createGhostFromTile(t));
+
+    // 2) Reflow grid FIRST (NYT): remove selected (grid collapses automatically)
+    selTiles.forEach(t => t.classList.add('locked'));
+    // clear selected styling (real tiles are disappearing anyway)
+    selTiles.forEach(t => t.classList.remove('selected'));
+    selected.clear();
+
+    // 3) Fly ghosts to bar target positions (no scaling)
+    bar.style.display = "flex";                 // reserve bar slot height
+    bar.style.background = "#ffffff";           // placeholder (invisible-ish)
+    bar.querySelector('.barTitle').textContent = "";
+    bar.querySelector('.barWords').textContent = "";
+
+    await nextFrame(); // layout settle after reflow
+
+    moveGhostsToBar(ghosts, bar);
+
+    // wait flight
+    await sleep(560);
+
+    // 4) Remove ghosts, then finalize big colored bar (NYT order)
+    ghosts.forEach(g => g.remove());
+    bar.style.background = groupDef.color;
+    bar.querySelector('.barTitle').textContent = groupDef.label.toUpperCase();
+    bar.querySelector('.barWords').textContent = groupDef.items.map(x=>x.toUpperCase()).join(", ");
+
+    found[groupIndex] = true;
+    barSlot += 1;
+    animating = false;
+
+    if(found.every(Boolean)){
+      setMsg("Hepsi tamam! 🎉");
+      disableAll();
+    }
+  }
+
+  function createGhostFromTile(tile){
+    const g = document.createElement('div');
+    g.className = "ghost";
+    g.textContent = tile.dataset.word;
+
+    const tr = rect(tile);
+    const wr = rect(document.querySelector('.wrap'));
+
+    g.style.left = (tr.left - wr.left) + "px";
+    g.style.top  = (tr.top  - wr.top ) + "px";
+
+    ghostLayer.appendChild(g);
+    return g;
+  }
+
+  function moveGhostsToBar(ghosts, bar){
+    const br = rect(bar);
+    const wr = rect(document.querySelector('.wrap'));
+
+    // Ghost size (same as tiles)
+    const gw = rect(ghosts[0]).width;
+    const gh = rect(ghosts[0]).height;
+    const gap = parseFloat(getCss('--gap')) || 18;
+
+    // Targets: 4 across inside bar
+    const totalW = 4*gw + 3*gap;
+    const startX = (br.left - wr.left) + (br.width - totalW)/2;
+    const y = (br.top - wr.top) + (br.height - gh)/2;
+
+    ghosts.forEach((g,i)=>{
+      const x0 = parseFloat(g.style.left);
+      const y0 = parseFloat(g.style.top);
+      const dx = (startX + i*(gw+gap)) - x0;
+      const dy = (y) - y0;
+      requestAnimationFrame(()=>{ g.style.transform = `translate(${dx}px, ${dy}px)`; });
+    });
+  }
+
+  // ---------- Utilities ----------
+  function el(q){ return document.querySelector(q); }
+  function getAllTiles(){ return [...gridEl.querySelectorAll('.tile')]; }
+  function getOpenTiles(){ return getAllTiles().filter(t => !t.classList.contains('locked')); }
+  function rect(node){ return node.getBoundingClientRect(); }
+  function arrEq(a,b){ return a.length===b.length && a.every((v,i)=>v===b[i]); }
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function getCss(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function nextFrame(){ return new Promise(r => requestAnimationFrame(()=>r())); }
+})();
+</script>
+</body>
+</html>
