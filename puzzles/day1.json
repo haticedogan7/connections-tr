@@ -1,6 +1,6 @@
 {
   "date": "2025-12-19",
-  "words": ["ORTAYA","YOLA","BAŞA","İŞTEN","AĞIR","DERİN","KESKİN","DÜZ","YAZ","YAZAR","YAZI","YAZMAK","KAR","KOR","KIL","KAL"],
+  "words": ["ORTAYA","YOLA","BAŞA","İŞTEN","AĞIR","DERİN","KESKİN","DÜZ","ÖĞRETMEN","ÖĞRENCİ","MÜDÜR","HADEME","KORKMAZ","ŞENGÜN","OKUR","OSMAN"],
   "groups": [
     {"label":"OKULDAKİ ÇEŞİTLİ İNSANLAR","items":["ÖĞRETMEN","ÖĞRENCİ","MÜDÜR","HADEME"],"color":"yellow"},
     {"label":"... ÇIKMAK","items":["ORTAYA","YOLA","BAŞA","İŞTEN"],"color":"green"},
