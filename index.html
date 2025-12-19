@@ -127,6 +127,56 @@
       .tile{ font-size: 15px; }
       .btn{ width: 200px; }
     }
+
+    /* ===== Start Screen ===== */
+  .startScreen{
+    position:fixed; inset:0;
+    background: var(--purple);
+    display:flex; align-items:center; justify-content:center;
+    padding: 24px;
+    z-index: 99999;
+  }
+  .startCard{
+    width:min(520px, calc(100vw - 24px));
+    text-align:center;
+    color:#111;
+  }
+  .startLogo{
+    width:64px; height:64px;
+    border-radius:14px;
+    background: rgba(255,255,255,.35);
+    margin: 0 auto 14px;
+    border: 2px solid rgba(0,0,0,.12);
+  }
+  .startTitle{
+    font-size:64px;
+    font-weight:900;
+    line-height:1;
+    margin: 6px 0 10px;
+  }
+  .startSubtitle{
+    font-size:26px;
+    line-height:1.2;
+    margin: 0 0 24px;
+    opacity:.95;
+  }
+  .startPlay{
+    width:min(320px, 100%);
+    height:70px;
+    border-radius:999px;
+    border:0;
+    background:#111;
+    color:#fff;
+    font-size:20px;
+    font-weight:900;
+    cursor:pointer;
+  }
+  .startMeta{
+    margin-top: 26px;
+    font-size:22px;
+    line-height:1.35;
+    opacity:.92;
+  }
   </style>
 </head>
 
@@ -158,21 +208,48 @@
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="title">Create four groups of four!</div>
-    <div id="msg" class="msg"></div>
+  <!-- ===== Start Screen ===== -->
+  <div id="startScreen" class="startScreen">
+    <div class="startCard">
+      <div class="startLogo" aria-label="logo placeholder"></div>
 
-    <div id="bars" class="bars"></div>
-    <div id="grid" class="grid"></div>
+      <div class="startTitle">Dört Dörtlük</div>
+      <div class="startSubtitle">Ortak bir bağlantısı olan kelimeleri dörderli gruplara ayır.</div>
 
-    <div class="mist">Mistakes Remaining:
-      <div class="dots" id="dots"></div>
+      <button id="btnPlay" class="startPlay">Oyna</button>
+
+      <div class="startMeta">
+        <div id="startDate">—</div>
+        <div id="startNo">No. —</div>
+        <div id="startBy">By Hatice Doğan</div>
+      </div>
     </div>
+  </div>
 
-    <div class="btnrow">
-      <button class="btn" id="shuffle">Shuffle</button>
-      <button class="btn" id="submit">Submit</button>
-      <button class="btn" id="clear">Deselect All</button>
+  <div id="gameScreen" style="display:none;">
+    <div class="wrap">
+      <div class="title">Create four groups of four!</div>
+      <div id="msg" class="msg"></div>
+
+      <div id="bars" class="bars"></div>
+      <div id="grid" class="grid"></div>
+
+      <div class="mist">Mistakes Remaining:
+        <div class="dots" id="dots"></div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn" id="shuffle">Shuffle</button>
+        <button class="btn" id="clear">Deselect All</button>
+        <button class="btn" id="submit">Submit</button>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin-top:14px;">
+        <button class="btn" id="viewResultsBtn"
+                style="display:none; width:min(320px,100%);">
+          Sonuçları Gör
+        </button>
+      </div>
     </div>
   </div>
 
@@ -189,6 +266,7 @@
 
   let tries = 0;
   let resultsLog = [];
+  let todayKey = null;
 
   // ---------- Emoji mapping ----------
   const EMOJI = { yellow:"🟨", green:"🟩", blue:"🟦", purple:"🟪" };
@@ -202,6 +280,8 @@
   const btnShuffle = el('#shuffle');
   const btnSubmit  = el('#submit');
   const btnClear   = el('#clear');
+  const btnPlay = document.getElementById("btnPlay");
+  const btnViewResults = document.getElementById("viewResultsBtn");
 
   // ---------- Load puzzle from JSON ----------
   async function loadPuzzle(url){
@@ -230,12 +310,39 @@
     renderBars();
     renderDots();
 
-    puzzle = await loadPuzzle("puzzles/day1.json");
+    const today = todayISO_TR();
+    todayKey = "dort-dortluk-played-" + today;
+    
+  try{
+    puzzle = await loadPuzzle(`puzzles/${today}.json?cb=` + Date.now());
+  }catch(e){
+    // fallback: dünkü puzzle
+    const yday = new Intl.DateTimeFormat("en-CA", { timeZone:"Europe/Istanbul" })
+      .format(new Date(Date.now() - 86400000));
+    puzzle = await loadPuzzle(`puzzles/${yday}.json?cb=` + Date.now());
+  }
+
+  const already = localStorage.getItem(todayKey);
+  if(already){
+    setMsg("Bugünkü bulmacayı zaten oynadın.");
+  }
     renderGrid(shuffle([...puzzle.words]));
 
     btnShuffle.onclick = () => !animating && shuffleOpen();
     btnClear.onclick   = () => !animating && clearSelection();
     btnSubmit.onclick  = () => !animating && submit();
+    btnViewResults.onclick = () => showResults(found.every(Boolean));
+    btnPlay.onclick = () => {
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    if(localStorage.getItem(todayKey)){
+      setMsg("Bugünkü bulmacayı zaten oynadın.");
+      disableAll();
+      btnViewResults.style.display = "block";
+      return;
+    }
+  };
   })();
 
   // ---------- Rendering ----------
@@ -350,8 +457,10 @@
       if(mistakesLeft <= 0){
         setMsg("Bitti.");
         disableAll();
+        if(todayKey) localStorage.setItem(todayKey, "done");
         revealRemaining();
-        setTimeout(()=>showResults(false),400);
+        btnViewResults.style.display = "block";
+        setTimeout(()=> showResults(false), 1500);
       }
       return;
     }
@@ -489,7 +598,9 @@
     if(found.every(Boolean)){
       setMsg("Hepsi tamam! 🎉");
       disableAll();
-      showResults(true);
+      if(todayKey) localStorage.setItem(todayKey, "done");
+      btnViewResults.style.display = "block";
+      setTimeout(()=> showResults(true), 1500);
     }
   }
 
@@ -524,7 +635,7 @@
     const header =
 `Connections TR
 Puzzle #${puzzleNo}
-${won ? "✅ Solved" : "❌ Missed"} (${4 - mistakesLeft} yanlış, ${tries} deneme)
+${won ? "✅ Solved" : "❌ Missed"} 
 `;
     const rows = resultsLog.slice(0, 4).map(r => r.join("")).join("\n");
     return header + rows;
@@ -560,6 +671,18 @@ ${won ? "✅ Solved" : "❌ Missed"} (${4 - mistakesLeft} yanlış, ${tries} den
   function rect(node){ return node.getBoundingClientRect(); }
   function arrEq(a,b){ return a.length===b.length && a.every((v,i)=>v===b[i]); }
 
+  function todayISO_TR(){
+    // Türkiye saatine göre YYYY-MM-DD
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date());
+  }
+
+  function dateTRPretty(iso){
+    // "2025-12-20" -> "20 Aralık 2025"
+    const [y,m,d] = iso.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m-1, d));
+    return new Intl.DateTimeFormat("tr-TR", { timeZone:"Europe/Istanbul", day:"numeric", month:"long", year:"numeric" }).format(dt);
+  }
+  
   function shuffle(arr){
     for(let i=arr.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
