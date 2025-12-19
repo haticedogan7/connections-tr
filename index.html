@@ -326,6 +326,12 @@
   if(already){
     setMsg("Bugünkü bulmacayı zaten oynadın.");
   }
+    // ✅ Start screen metalarını doldur
+    document.getElementById("startDate").textContent = dateTRPretty(today);
+    document.getElementById("startNo").textContent   = "No. " + (puzzle.id ?? "—");
+    document.getElementById("startBy").textContent   = "By Hatice Doğan";
+
+    
     renderGrid(shuffle([...puzzle.words]));
 
     btnShuffle.onclick = () => !animating && shuffleOpen();
@@ -677,7 +683,6 @@ ${won ? "✅ Solved" : "❌ Missed"}
   }
 
   function dateTRPretty(iso){
-    // "2025-12-20" -> "20 Aralık 2025"
     const [y,m,d] = iso.split("-").map(Number);
     const dt = new Date(Date.UTC(y, m-1, d));
     return new Intl.DateTimeFormat("tr-TR", { timeZone:"Europe/Istanbul", day:"numeric", month:"long", year:"numeric" }).format(dt);
