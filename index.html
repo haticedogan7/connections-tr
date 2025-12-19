@@ -180,6 +180,32 @@
   </style>
 </head>
 
+<!-- Results Modal -->
+<div id="resultsOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:10000;">
+  <div id="resultsModal" style="width:min(520px, calc(100vw - 24px)); background:#fff; border-radius:22px; margin: 10vh auto; padding: 22px 20px; text-align:center;">
+    <div id="resultsTitle" style="font-size:42px; font-weight:900; margin: 4px 0 10px;">Next Time!</div>
+    <div style="height:1px; background:#ddd; margin: 14px 0;"></div>
+
+    <div style="display:flex; justify-content:space-around; gap:14px; margin: 8px 0 8px;">
+      <div><div id="statTries" style="font-size:34px; font-weight:900;">0</div><div style="color:#666;">Deneme</div></div>
+      <div><div id="statMistakes" style="font-size:34px; font-weight:900;">0</div><div style="color:#666;">Yanlış</div></div>
+      <div><div id="statSolved" style="font-size:34px; font-weight:900;">—</div><div style="color:#666;">Durum</div></div>
+    </div>
+
+    <div style="height:1px; background:#ddd; margin: 14px 0;"></div>
+
+    <div id="emojiGrid" style="display:inline-grid; grid-template-columns:repeat(4, 22px); gap:8px; margin: 10px 0 18px; font-size:20px; line-height:20px;"></div>
+
+    <button id="shareBtn" class="btn" style="width:min(340px, 100%); height:58px; border-radius:999px; background:#111; color:#fff; border:0;">
+      Share Your Results
+    </button>
+
+    <div style="margin-top:10px;">
+      <button id="closeResults" style="background:transparent; border:0; color:#555; font-weight:700; cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+  
 <body>
   <div class="wrap">
     <div class="title">Create four groups of four!</div>
@@ -204,7 +230,7 @@
 
 <script>
 (() => {
-  // ---------- Puzzle (şimdilik hard-coded) ----------
+  // ---------- Puzzle ----------
   const COLORS = {
     yellow: getCss('--yellow'), green: getCss('--green'),
     blue: getCss('--blue'), purple: getCss('--purple')
@@ -218,7 +244,20 @@
   let found = [false,false,false,false];
   let barSlot = 0;
   let animating = false;
+  
+  let tries = 0;            // kaç submit yapıldı
+  let resultsLog = [];      // her deneme için 4 renk (emoji satırı)
+  let solvedOrder = [];     // bulunan grupların renk sırası (bulma sırasına göre)
+  let gameOver = false;
 
+  // ---------- Emoji mapping (results share) ----------
+  const EMOJI = {
+    yellow: "🟨",
+    green:  "🟩",
+    blue:   "🟦",
+    purple: "🟪"
+  };
+  
   const msgEl = el('#msg');
   const gridEl = el('#grid');
   const barsEl = el('#bars');
@@ -303,7 +342,7 @@
     selected.clear();
     setMsg("Shuffled");
   }
-
+ // ---------- Helpers ----------
   function oneAwayHint(selWords){
   // selWords: 4 kelime (sorted olmasına gerek yok)
     for(let i=0;i<puzzle.groups.length;i++){
@@ -317,10 +356,21 @@
     }
     return false;
   }
+
+  function wordToColorKey(word){
+    const W = word.toUpperCase();
+    for(const g of puzzle.groups){
+      if(g.items.map(x=>x.toUpperCase()).includes(W)){
+        return g.colorKey; // "yellow"
+      }
+    }
+    return null;
+  }
   
   function submit(){
     if(selected.size !== 4){ setMsg("4 kelime seç."); return; }
-
+    tries += 1;
+    
     const selWords = [...selected].map(t => t.dataset.word).sort();
     let hit = -1;
     for(let i=0;i<puzzle.groups.length;i++){
@@ -331,6 +381,12 @@
 
     if(hit === -1){
     const isOneAway = oneAwayHint(selWords); // selWords zaten elinizde
+
+    const row = selWords
+      .map(w => wordToColorKey(w))
+      .map(k => EMOJI[k] || "⬜");
+    resultsLog.push(row);
+      
     mistakesLeft -= 1;
     renderDots();
     setMsg(isOneAway ? "Bir adım uzakta! (3 doğru, 1 yanlış)" : "Tekrar dene.");
@@ -338,11 +394,14 @@
     if(mistakesLeft <= 0){
       setMsg("Bitti.");
       disableAll();
+      showResults(false);
     }
     return;
   }
 
     setMsg("Doğru!");
+    const row = selWords.map(w => wordToColorKey(w)).map(k => EMOJI[k] || "⬜");
+    resultsLog.push(row);
     animateSolve(hit, puzzle.groups[hit]);
   }
 
@@ -459,6 +518,7 @@ async function animateSolve(groupIndex, groupDef){
   if(found.every(Boolean)){
     setMsg("Hepsi tamam! 🎉");
     disableAll();
+    showResults(true);
   }
 }
 
@@ -522,6 +582,63 @@ async function animateSolve(groupIndex, groupDef){
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
   function nextFrame(){ return new Promise(r => requestAnimationFrame(()=>r())); }
 })();
+  
+  const overlay = document.getElementById("resultsOverlay");
+  const closeBtn = document.getElementById("closeResults");
+  const shareBtn = document.getElementById("shareBtn");
+
+  closeBtn.onclick = () => overlay.style.display = "none";
+  overlay.addEventListener("click", (e)=>{ if(e.target === overlay) overlay.style.display="none"; });
+
+  function showResults(won){
+    document.getElementById("resultsTitle").textContent = won ? "Nice!" : "Next Time!";
+    document.getElementById("statTries").textContent = String(tries);
+    document.getElementById("statMistakes").textContent = String(4 - mistakesLeft);
+    document.getElementById("statSolved").textContent = won ? "Solved" : "Missed";
+
+    // emoji grid (en fazla 4 satır göstermek istersen slice kullan)
+    const grid = document.getElementById("emojiGrid");
+    grid.innerHTML = "";
+    const rows = resultsLog.slice(0, 4); // NYT gibi 4 satır istiyorsan
+    rows.forEach(r => r.forEach(ch => {
+      const cell = document.createElement("div");
+      cell.textContent = ch;
+      grid.appendChild(cell);
+    }));
+
+    overlay.style.display = "block";
+  }
+
+  function buildShareText(won){
+    const puzzleNo = 1; // istersen JSON'a "id" koyup buraya basarsın
+    const header = `Connections TR\nPuzzle #${puzzleNo}\n${won ? "✅ Solved" : "❌ Missed"} (${4 - mistakesLeft} yanlış, ${tries} deneme)\n`;
+    const rows = resultsLog.slice(0, 4).map(r => r.join("")).join("\n");
+    return header + rows;
+  }
+
+  shareBtn.onclick = async () => {
+    const won = found.every(Boolean);
+    const text = buildShareText(won);
+
+    try{
+      if(navigator.share){
+        await navigator.share({ text });
+      }else{
+        await navigator.clipboard.writeText(text);
+        shareBtn.textContent = "Copied!";
+        setTimeout(()=> shareBtn.textContent = "Share Your Results", 900);
+      }
+    }catch(err){
+      // fallback
+      try{
+        await navigator.clipboard.writeText(text);
+        shareBtn.textContent = "Copied!";
+        setTimeout(()=> shareBtn.textContent = "Share Your Results", 900);
+      }catch(_){
+        alert(text); // en son çare
+      }
+    }
+  };
 </script>
 </body>
 </html>
