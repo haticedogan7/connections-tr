@@ -59,7 +59,26 @@
     }
     .btn:active{background:#f0f0f0}
     .btn:disabled{opacity:.5; cursor:not-allowed}
+    
+    async function loadPuzzle(url){
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("Puzzle yüklenemedi: " + res.status);
+    const data = await res.json();
 
+    const palette = {
+      yellow: getCss('--yellow'),
+      green:  getCss('--green'),
+      blue:   getCss('--blue'),
+      purple: getCss('--purple'),
+    };
+
+    data.groups = data.groups.map(g => ({
+      ...g,
+      color: palette[g.color] || g.color
+    }));
+
+    return data;
+  }
     /* Ghost layer */
     .ghostLayer{position:relative; height:0;}
     .ghost{
@@ -191,15 +210,7 @@
     blue: getCss('--blue'), purple: getCss('--purple')
   };
 
-  const puzzle = {
-    words: ["GÖZ","EL","DİL","YÜZ","MANTI","BÖREK","PİDE","LAHMACUN","YAZ","YAZAR","YAZI","YAZMAK","KAR","KOR","KIL","KAL"],
-    groups: [
-      {label:"VÜCUT/ORGAN", items:["GÖZ","EL","DİL","YÜZ"], color: COLORS.yellow},
-      {label:"HAMUR İŞİ",   items:["MANTI","BÖREK","PİDE","LAHMACUN"], color: COLORS.green},
-      {label:"YAZ- KÖKÜ",   items:["YAZ","YAZAR","YAZI","YAZMAK"], color: COLORS.blue},
-      {label:"K_ R / K_ L", items:["KAR","KOR","KIL","KAL"], color: COLORS.purple},
-    ]
-  };
+  let puzzle = null;
 
   // ---------- State ----------
   let mistakesLeft = 4;
@@ -218,14 +229,17 @@
   const btnSubmit  = el('#submit');
   const btnClear   = el('#clear');
 
-  // ---------- Init ----------
-  renderBars();
-  renderDots();
-  renderGrid(shuffle([...puzzle.words]));
+  (async function init(){
+    renderBars();
+    renderDots();
 
-  btnShuffle.onclick = () => !animating && shuffleOpen();
-  btnClear.onclick   = () => !animating && clearSelection();
-  btnSubmit.onclick  = () => !animating && submit();
+    puzzle = await loadPuzzle("puzzles/day1.json");
+    renderGrid(shuffle([...puzzle.words]));
+
+    btnShuffle.onclick = () => !animating && shuffleOpen();
+    btnClear.onclick   = () => !animating && clearSelection();
+    btnSubmit.onclick  = () => !animating && submit();
+  })();
 
   // ---------- Rendering ----------
   function renderBars(){
