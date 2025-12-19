@@ -86,12 +86,16 @@
     position: fixed !important;
     z-index: 9999;
     margin: 0 !important;
-    transition: transform 520ms cubic-bezier(.2,.8,.2,1);
+    transition: transform 650ms cubic-bezier(.2,.8,.2,1);
   }
 
   .flip{
-    transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+    transition: transform 320ms cubic-bezier(.2,.8,.2,1);
     will-change: transform;
+  }
+  .bar{
+    opacity: 1;
+    transition: opacity 180ms ease;
   }
   </style>
 </head>
@@ -225,6 +229,20 @@
     setMsg("Shuffled");
   }
 
+  function oneAwayHint(selWords){
+  // selWords: 4 kelime (sorted olmasına gerek yok)
+    for(let i=0;i<puzzle.groups.length;i++){
+      if(found[i]) continue;
+      const target = new Set(puzzle.groups[i].items.map(x=>x.toUpperCase()));
+      let match = 0;
+      for(const w of selWords){
+        if(target.has(w)) match++;
+      }
+      if(match === 3) return true;
+    }
+    return false;
+  }
+  
   function submit(){
     if(selected.size !== 4){ setMsg("4 kelime seç."); return; }
 
@@ -237,15 +255,17 @@
     }
 
     if(hit === -1){
-      mistakesLeft -= 1;
-      renderDots();
-      setMsg("Tekrar dene.");
-      if(mistakesLeft <= 0){
-        setMsg("Bitti.");
-        disableAll();
-      }
-      return;
+    const isOneAway = oneAwayHint(selWords); // selWords zaten elinizde
+    mistakesLeft -= 1;
+    renderDots();
+    setMsg(isOneAway ? "Bir adım uzakta! (3 doğru, 1 yanlış)" : "Tekrar dene.");
+
+    if(mistakesLeft <= 0){
+      setMsg("Bitti.");
+      disableAll();
     }
+    return;
+  }
 
     setMsg("Doğru!");
     animateSolve(hit, puzzle.groups[hit]);
@@ -277,6 +297,7 @@ async function animateSolve(groupIndex, groupDef){
   bar.style.background = "#ffffff";
   bar.querySelector('.barTitle').textContent = "";
   bar.querySelector('.barWords').textContent = "";
+  bar.style.opacity = "0"; 
 
   await nextFrame(); // bar görünür -> layout değişsin
 
@@ -340,7 +361,7 @@ async function animateSolve(groupIndex, groupDef){
   });
 
   // uçuş bitsin
-  await sleep(560);
+  await sleep(700);
 
   // ---------- 5) Seçili tile'ları tamamen kaldır + barı finalize et ----------
   selTiles.forEach(t => t.remove());
@@ -348,7 +369,8 @@ async function animateSolve(groupIndex, groupDef){
   bar.style.background = groupDef.color;
   bar.querySelector('.barTitle').textContent = groupDef.label.toUpperCase();
   bar.querySelector('.barWords').textContent = groupDef.items.map(x=>x.toUpperCase()).join(", ");
-
+  requestAnimationFrame(()=> bar.style.opacity = "1"); // mini fade-in
+  
   found[groupIndex] = true;
   barSlot += 1;
 
