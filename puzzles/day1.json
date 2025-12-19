@@ -1,0 +1,10 @@
+{
+  "date": "2025-12-19",
+  "words": ["GÖZ","EL","DİL","YÜZ","MANTI","BÖREK","PİDE","LAHMACUN","YAZ","YAZAR","YAZI","YAZMAK","KAR","KOR","KIL","KAL"],
+  "groups": [
+    {"label":"VÜCUT/ORGAN","items":["GÖZ","EL","DİL","YÜZ"],"color":"yellow"},
+    {"label":"HAMUR İŞİ","items":["MANTI","BÖREK","PİDE","LAHMACUN"],"color":"green"},
+    {"label":"YAZ- KÖKÜ","items":["YAZ","YAZAR","YAZI","YAZMAK"],"color":"blue"},
+    {"label":"K_ R / K_ L","items":["KAR","KOR","KIL","KAL"],"color":"purple"}
+  ]
+}
