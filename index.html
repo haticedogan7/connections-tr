@@ -230,7 +230,7 @@
     renderBars();
     renderDots();
 
-    puzzle = await loadPuzzle("puzzles/day1.json);
+    puzzle = await loadPuzzle("puzzles/day1.json");
     renderGrid(shuffle([...puzzle.words]));
 
     btnShuffle.onclick = () => !animating && shuffleOpen();
