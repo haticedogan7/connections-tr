@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Connections TR</title>
+
   <style>
     :root{
       --bg:#ffffff; --text:#151515;
@@ -13,6 +14,7 @@
       --radius:14px;
       --ease:cubic-bezier(.2,.8,.2,1);
     }
+
     *{box-sizing:border-box; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
     body{margin:0; background:var(--bg); color:var(--text);}
     .wrap{width:min(880px, calc(100vw - 24px)); margin:18px auto;}
@@ -21,8 +23,14 @@
 
     .bars{display:flex; flex-direction:column; gap:14px; margin: 8px 0 16px;}
     .bar{
-      height:var(--barH); border-radius:var(--radius);
-      display:none; align-items:center; justify-content:center; flex-direction:column;
+      height:var(--barH);
+      border-radius:var(--radius);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      opacity:1;
+      transition: opacity 180ms ease;
     }
     .barTitle{font-weight:900; font-size:22px; line-height:1.05; margin-top:8px;}
     .barWords{font-size:18px; line-height:1.1; margin-bottom:10px;}
@@ -33,6 +41,7 @@
       gap: var(--gap);
       margin-bottom: 14px;
     }
+
     .tile{
       height:var(--tileH);
       border-radius:var(--radius);
@@ -59,8 +68,143 @@
     }
     .btn:active{background:#f0f0f0}
     .btn:disabled{opacity:.5; cursor:not-allowed}
-    
-    async function loadPuzzle(url){
+
+    /* Flying selected tiles */
+    .floating{
+      position: fixed !important;
+      z-index: 9999;
+      margin: 0 !important;
+      transition: transform 650ms var(--ease);
+    }
+
+    /* Smooth reflow (FLIP) */
+    .flip{
+      transition: transform 320ms var(--ease);
+      will-change: transform;
+    }
+
+    /* ===== Mobile polish ===== */
+    @media (max-width: 560px){
+      .wrap{ width: calc(100vw - 16px); margin: 12px auto; }
+      .title{ font-size: 18px; }
+      .msg{ font-size: 18px; height: 26px; margin: 6px 0 10px; }
+
+      .grid{
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+
+      :root{
+        --gap: 10px;
+        --tileH: 56px;
+        --barH: 72px;
+        --radius: 12px;
+      }
+
+      .tile{ font-size: 13px; border-radius: var(--radius); }
+      .tile.selected{ border-width: 3px; }
+
+      .bar{ border-radius: var(--radius); }
+      .barTitle{ font-size: 16px; margin-top: 6px; }
+      .barWords{ font-size: 13px; padding: 0 10px; text-wrap: balance; }
+
+      .mist{ font-size: 13px; }
+      .dot{ font-size: 20px; }
+
+      .btnrow{ gap: 10px; margin-top: 10px; }
+      .btn{
+        width: 100%;
+        max-width: 520px;
+        height: 52px;
+        font-size: 16px;
+      }
+    }
+
+    @media (min-width: 561px) and (max-width: 820px){
+      .wrap{ width: calc(100vw - 24px); }
+      .grid{ gap: 14px; }
+      :root{ --tileH: 68px; --barH: 78px; }
+      .tile{ font-size: 15px; }
+      .btn{ width: 200px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Results Modal (body içinde olmalı) -->
+  <div id="resultsOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:10000;">
+    <div id="resultsModal" style="width:min(520px, calc(100vw - 24px)); background:#fff; border-radius:22px; margin: 10vh auto; padding: 22px 20px; text-align:center;">
+      <div id="resultsTitle" style="font-size:42px; font-weight:900; margin: 4px 0 10px;">Next Time!</div>
+      <div style="height:1px; background:#ddd; margin: 14px 0;"></div>
+
+      <div style="display:flex; justify-content:space-around; gap:14px; margin: 8px 0 8px;">
+        <div><div id="statTries" style="font-size:34px; font-weight:900;">0</div><div style="color:#666;">Deneme</div></div>
+        <div><div id="statMistakes" style="font-size:34px; font-weight:900;">0</div><div style="color:#666;">Yanlış</div></div>
+        <div><div id="statSolved" style="font-size:34px; font-weight:900;">—</div><div style="color:#666;">Durum</div></div>
+      </div>
+
+      <div style="height:1px; background:#ddd; margin: 14px 0;"></div>
+
+      <div id="emojiGrid" style="display:inline-grid; grid-template-columns:repeat(4, 22px); gap:8px; margin: 10px 0 18px; font-size:20px; line-height:20px;"></div>
+
+      <button id="shareBtn" class="btn" style="width:min(340px, 100%); height:58px; border-radius:999px; background:#111; color:#fff; border:0;">
+        Share Your Results
+      </button>
+
+      <div style="margin-top:10px;">
+        <button id="closeResults" style="background:transparent; border:0; color:#555; font-weight:700; cursor:pointer;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="title">Create four groups of four!</div>
+    <div id="msg" class="msg"></div>
+
+    <div id="bars" class="bars"></div>
+    <div id="grid" class="grid"></div>
+
+    <div class="mist">Mistakes Remaining:
+      <div class="dots" id="dots"></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn" id="shuffle">Shuffle</button>
+      <button class="btn" id="submit">Submit</button>
+      <button class="btn" id="clear">Deselect All</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------- State ----------
+  let puzzle = null;
+
+  let mistakesLeft = 4;
+  let selected = new Set();
+  let found = [false,false,false,false];
+  let barSlot = 0;
+  let animating = false;
+
+  let tries = 0;
+  let resultsLog = [];
+
+  // ---------- Emoji mapping ----------
+  const EMOJI = { yellow:"🟨", green:"🟩", blue:"🟦", purple:"🟪" };
+
+  // ---------- DOM ----------
+  const msgEl = el('#msg');
+  const gridEl = el('#grid');
+  const barsEl = el('#bars');
+  const dotsEl = el('#dots');
+
+  const btnShuffle = el('#shuffle');
+  const btnSubmit  = el('#submit');
+  const btnClear   = el('#clear');
+
+  // ---------- Load puzzle from JSON ----------
+  async function loadPuzzle(url){
     const res = await fetch(url);
     if(!res.ok) throw new Error("Puzzle yüklenemedi: " + res.status);
     const data = await res.json();
@@ -74,200 +218,14 @@
 
     data.groups = data.groups.map(g => ({
       ...g,
-      color: palette[g.color] || g.color
+      colorKey: g.color,                 // "yellow" -> emoji için
+      color: palette[g.color] || g.color // hex -> UI için
     }));
 
     return data;
   }
-    /* Ghost layer */
-    .ghostLayer{position:relative; height:0;}
-    .ghost{
-      position:absolute;
-      width: calc((min(880px, calc(100vw - 24px)) - 3*var(--gap))/4);
-      height: var(--tileH);
-      border-radius: var(--radius);
-      background: var(--tileSel);
-      border:4px solid var(--tileSel);
-      display:flex; align-items:center; justify-content:center;
-      font-weight:900; font-size:18px;
-      transform: translate(0,0);
-      transition: transform 520ms var(--ease);
-      pointer-events:none;
-    }
 
-    /* Mobile tweak */
-    @media (max-width: 560px){
-    .grid{grid-template-columns: repeat(4, 1fr);}
-  }
-    /* Flying selected tiles (real tiles, not ghosts) */
-  .floating{
-    position: fixed !important;
-    z-index: 9999;
-    margin: 0 !important;
-    transition: transform 650ms cubic-bezier(.2,.8,.2,1);
-  }
-
-  .flip{
-    transition: transform 320ms cubic-bezier(.2,.8,.2,1);
-    will-change: transform;
-  }
-  .bar{
-    opacity: 1;
-    transition: opacity 180ms ease;
-  }
-    /* ===== Mobile polish ===== */
-  @media (max-width: 560px){
-    .wrap{ width: calc(100vw - 16px); margin: 12px auto; }
-
-    .title{ font-size: 18px; }
-    .msg{ font-size: 18px; height: 26px; margin: 6px 0 10px; }
-
-    /* Keep 4 columns (NYT-like), shrink tiles */
-    .grid{
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-
-    :root{
-      --gap: 10px;
-      --tileH: 56px;
-      --barH: 72px;
-      --radius: 12px;
-    }
-
-    .tile{
-      font-size: 13px;
-      border-radius: var(--radius);
-    }
-    .tile.selected{
-      border-width: 3px;
-    }
-
-    .bar{
-      border-radius: var(--radius);
-    }
-    .barTitle{ font-size: 16px; margin-top: 6px; }
-    .barWords{
-      font-size: 13px;
-      padding: 0 10px;
-      text-wrap: balance;
-    }
-
-    .mist{ font-size: 13px; }
-    .dot{ font-size: 20px; }
-
-    /* Buttons: stack nicely and be thumb-friendly */
-    .btnrow{
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .btn{
-      width: 100%;
-      max-width: 520px;
-      height: 52px;
-      font-size: 16px;
-    }
-  }
-
-  /* Slightly larger phones */
-  @media (min-width: 561px) and (max-width: 820px){
-    .wrap{ width: calc(100vw - 24px); }
-    .grid{ gap: 14px; }
-    :root{ --tileH: 68px; --barH: 78px; }
-    .tile{ font-size: 15px; }
-    .btn{ width: 200px; }
-  }
-  </style>
-</head>
-
-<!-- Results Modal -->
-<div id="resultsOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:10000;">
-  <div id="resultsModal" style="width:min(520px, calc(100vw - 24px)); background:#fff; border-radius:22px; margin: 10vh auto; padding: 22px 20px; text-align:center;">
-    <div id="resultsTitle" style="font-size:42px; font-weight:900; margin: 4px 0 10px;">Next Time!</div>
-    <div style="height:1px; background:#ddd; margin: 14px 0;"></div>
-
-    <div style="display:flex; justify-content:space-around; gap:14px; margin: 8px 0 8px;">
-      <div><div id="statTries" style="font-size:34px; font-weight:900;">0</div><div style="color:#666;">Deneme</div></div>
-      <div><div id="statMistakes" style="font-size:34px; font-weight:900;">0</div><div style="color:#666;">Yanlış</div></div>
-      <div><div id="statSolved" style="font-size:34px; font-weight:900;">—</div><div style="color:#666;">Durum</div></div>
-    </div>
-
-    <div style="height:1px; background:#ddd; margin: 14px 0;"></div>
-
-    <div id="emojiGrid" style="display:inline-grid; grid-template-columns:repeat(4, 22px); gap:8px; margin: 10px 0 18px; font-size:20px; line-height:20px;"></div>
-
-    <button id="shareBtn" class="btn" style="width:min(340px, 100%); height:58px; border-radius:999px; background:#111; color:#fff; border:0;">
-      Share Your Results
-    </button>
-
-    <div style="margin-top:10px;">
-      <button id="closeResults" style="background:transparent; border:0; color:#555; font-weight:700; cursor:pointer;">Close</button>
-    </div>
-  </div>
-</div>
-  
-<body>
-  <div class="wrap">
-    <div class="title">Create four groups of four!</div>
-    <div id="msg" class="msg"></div>
-
-    <div id="bars" class="bars"></div>
-
-    <div id="grid" class="grid"></div>
-
-    <div class="mist">Mistakes Remaining:
-      <div class="dots" id="dots"></div>
-    </div>
-
-    <div class="btnrow">
-      <button class="btn" id="shuffle">Shuffle</button>
-      <button class="btn" id="submit">Submit</button>
-      <button class="btn" id="clear">Deselect All</button>
-    </div>
-
-    <div class="ghostLayer" id="ghostLayer"></div>
-  </div>
-
-<script>
-(() => {
-  // ---------- Puzzle ----------
-  const COLORS = {
-    yellow: getCss('--yellow'), green: getCss('--green'),
-    blue: getCss('--blue'), purple: getCss('--purple')
-  };
-
-  let puzzle = null;
-
-  // ---------- State ----------
-  let mistakesLeft = 4;
-  let selected = new Set();      // Set<HTMLElement tile>
-  let found = [false,false,false,false];
-  let barSlot = 0;
-  let animating = false;
-  
-  let tries = 0;            // kaç submit yapıldı
-  let resultsLog = [];      // her deneme için 4 renk (emoji satırı)
-  let solvedOrder = [];     // bulunan grupların renk sırası (bulma sırasına göre)
-  let gameOver = false;
-
-  // ---------- Emoji mapping (results share) ----------
-  const EMOJI = {
-    yellow: "🟨",
-    green:  "🟩",
-    blue:   "🟦",
-    purple: "🟪"
-  };
-  
-  const msgEl = el('#msg');
-  const gridEl = el('#grid');
-  const barsEl = el('#bars');
-  const dotsEl = el('#dots');
-  const ghostLayer = el('#ghostLayer');
-
-  const btnShuffle = el('#shuffle');
-  const btnSubmit  = el('#submit');
-  const btnClear   = el('#clear');
-
+  // ---------- Init ----------
   (async function init(){
     renderBars();
     renderDots();
@@ -312,6 +270,7 @@
       t.onclick = () => {
         if(animating) return;
         if(t.classList.contains('locked')) return;
+
         if(selected.has(t)){
           selected.delete(t);
           t.classList.remove('selected');
@@ -325,7 +284,7 @@
     });
   }
 
-  // ---------- Actions ----------
+  // ---------- Helpers ----------
   function setMsg(t){ msgEl.textContent = t || ""; }
 
   function clearSelection(){
@@ -342,16 +301,13 @@
     selected.clear();
     setMsg("Shuffled");
   }
- // ---------- Helpers ----------
+
   function oneAwayHint(selWords){
-  // selWords: 4 kelime (sorted olmasına gerek yok)
     for(let i=0;i<puzzle.groups.length;i++){
       if(found[i]) continue;
       const target = new Set(puzzle.groups[i].items.map(x=>x.toUpperCase()));
       let match = 0;
-      for(const w of selWords){
-        if(target.has(w)) match++;
-      }
+      for(const w of selWords) if(target.has(w)) match++;
       if(match === 3) return true;
     }
     return false;
@@ -366,42 +322,40 @@
     }
     return null;
   }
-  
+
+  // ---------- Game ----------
   function submit(){
     if(selected.size !== 4){ setMsg("4 kelime seç."); return; }
     tries += 1;
-    
+
     const selWords = [...selected].map(t => t.dataset.word).sort();
     let hit = -1;
+
     for(let i=0;i<puzzle.groups.length;i++){
       if(found[i]) continue;
       const target = puzzle.groups[i].items.map(x=>x.toUpperCase()).sort();
       if(arrEq(selWords, target)){ hit = i; break; }
     }
 
-    if(hit === -1){
-    const isOneAway = oneAwayHint(selWords); // selWords zaten elinizde
-
-    const row = selWords
-      .map(w => wordToColorKey(w))
-      .map(k => EMOJI[k] || "⬜");
-    resultsLog.push(row);
-      
-    mistakesLeft -= 1;
-    renderDots();
-    setMsg(isOneAway ? "Bir adım uzakta! (3 doğru, 1 yanlış)" : "Tekrar dene.");
-
-    if(mistakesLeft <= 0){
-      setMsg("Bitti.");
-      disableAll();
-      showResults(false);
-    }
-    return;
-  }
-
-    setMsg("Doğru!");
+    // log every submit (NYT-like)
     const row = selWords.map(w => wordToColorKey(w)).map(k => EMOJI[k] || "⬜");
     resultsLog.push(row);
+
+    if(hit === -1){
+      const isOneAway = oneAwayHint(selWords);
+      mistakesLeft -= 1;
+      renderDots();
+      setMsg(isOneAway ? "Bir adım uzakta! (3 doğru, 1 yanlış)" : "Tekrar dene.");
+
+      if(mistakesLeft <= 0){
+        setMsg("Bitti.");
+        disableAll();
+        showResults(false);
+      }
+      return;
+    }
+
+    setMsg("Doğru!");
     animateSolve(hit, puzzle.groups[hit]);
   }
 
@@ -412,153 +366,166 @@
     getAllTiles().forEach(t => t.style.pointerEvents = "none");
   }
 
-  // ---------- NYT-style animation ----------
-async function animateSolve(groupIndex, groupDef){
-  animating = true;
+  // ---------- NYT-style animation (FLIP + fly) ----------
+  async function animateSolve(groupIndex, groupDef){
+    animating = true;
 
-  const bar = el(`#bar-${barSlot}`);
+    const bar = el(`#bar-${barSlot}`);
 
-  // ---------- FIRST: ölç (griddeyken) ----------
-  const allTiles = getAllTiles(); // locked olmayanlar + selected dahil
-  const first = new Map();
-  allTiles.forEach(t => first.set(t, rect(t)));
+    // FIRST positions
+    const allTiles = getAllTiles();
+    const first = new Map();
+    allTiles.forEach(t => first.set(t, rect(t)));
 
-  // seçilenleri soldan sağa sırala
-  const selTiles = [...selected].sort((a,b)=> rect(a).left - rect(b).left);
+    const selTiles = [...selected].sort((a,b)=> rect(a).left - rect(b).left);
 
-  // ---------- 1) Bar placeholder aç: grid aşağı insin ----------
-  bar.style.display = "flex";
-  bar.style.background = "#ffffff";
-  bar.querySelector('.barTitle').textContent = "";
-  bar.querySelector('.barWords').textContent = "";
-  bar.style.opacity = "0"; 
+    // Bar placeholder (push grid down)
+    bar.style.display = "flex";
+    bar.style.background = "#ffffff";
+    bar.querySelector('.barTitle').textContent = "";
+    bar.querySelector('.barWords').textContent = "";
+    bar.style.opacity = "0";
 
-  await nextFrame(); // bar görünür -> layout değişsin
+    await nextFrame();
 
-  // ---------- 2) Seçili tile'ları "uçan" moda al (KAYBOLMADAN) ----------
-  // Sabitle: mevcut ekrandaki pozisyonlarını fixed'e çevir
-  const selFixedStart = selTiles.map(t => {
-    const r = rect(t);
-    t.classList.add('floating');        // fixed olur
-    t.style.left = r.left + "px";
-    t.style.top  = r.top  + "px";
-    t.style.width  = r.width + "px";
-    t.style.height = r.height + "px";
-    t.style.transform = "translate(0px,0px)";
-    return r;
-  });
-
-  // ---------- 3) Grid reflow: seçili tile'ların yerini boşalt ----------
-  // (gridde boşluk kalmasın diye gridden çıkarıyoruz ama kendileri fixed olduğu için görünmeye devam edecek)
-  selTiles.forEach(t => t.classList.add('locked'));
-  // artık selected set temizleyelim
-  selected.clear();
-
-  // ---------- LAST: reflow sonrası ölç ----------
-  await nextFrame(); // reflow gerçekleşsin
-  const remaining = getOpenTiles(); // locked olmayanlar
-  const last = new Map();
-  remaining.forEach(t => last.set(t, rect(t)));
-
-  // ---------- INVERT + PLAY (FLIP): kalan tile'lar smooth hareket etsin ----------
-  remaining.forEach(t => {
-    const a = first.get(t);
-    const b = last.get(t);
-    if(!a || !b) return;
-    const dx = a.left - b.left;
-    const dy = a.top  - b.top;
-    t.classList.add('flip');
-    t.style.transform = `translate(${dx}px, ${dy}px)`;
-  });
-
-  // transform’u 1 frame sonra sıfırla -> animasyon başlar
-  await nextFrame();
-  remaining.forEach(t => { t.style.transform = "translate(0px,0px)"; });
-
-  // ---------- 4) Seçili tile'ları bar içine uçur (no scale) ----------
-  const br = rect(bar);
-  const gw = selFixedStart[0].width;
-  const gh = selFixedStart[0].height;
-  const gap = parseFloat(getCss('--gap')) || 18;
-
-  const totalW = 4*gw + 3*gap;
-  const startX = br.left + (br.width - totalW)/2;
-  const y = br.top + (br.height - gh)/2;
-
-  selTiles.forEach((t,i)=>{
-    const r0 = selFixedStart[i];
-    const tx = (startX + i*(gw+gap)) - r0.left;
-    const ty = y - r0.top;
-    requestAnimationFrame(()=> {
-      t.style.transform = `translate(${tx}px, ${ty}px)`;
+    // Make selected tiles floating at their current position
+    const selFixedStart = selTiles.map(t => {
+      const r = rect(t);
+      t.classList.add('floating');
+      t.style.left = r.left + "px";
+      t.style.top  = r.top  + "px";
+      t.style.width  = r.width + "px";
+      t.style.height = r.height + "px";
+      t.style.transform = "translate(0px,0px)";
+      return r;
     });
-  });
 
-  // uçuş bitsin
-  await sleep(700);
+    // Remove from grid flow (but visible because floating)
+    selTiles.forEach(t => t.classList.add('locked'));
+    selected.clear();
 
-  // ---------- 5) Seçili tile'ları tamamen kaldır + barı finalize et ----------
-  selTiles.forEach(t => t.remove());
+    await nextFrame();
 
-  bar.style.background = groupDef.color;
-  bar.querySelector('.barTitle').textContent = groupDef.label.toUpperCase();
-  bar.querySelector('.barWords').textContent = groupDef.items.map(x=>x.toUpperCase()).join(", ");
-  requestAnimationFrame(()=> bar.style.opacity = "1"); // mini fade-in
-  
-  found[groupIndex] = true;
-  barSlot += 1;
+    // FLIP remaining tiles
+    const remaining = getOpenTiles();
+    const last = new Map();
+    remaining.forEach(t => last.set(t, rect(t)));
 
-  // cleanup: flip class’ları bir süre sonra temizle (istersen kalsın da olur)
-  setTimeout(()=>{
-    remaining.forEach(t => t.classList.remove('flip'));
-  }, 300);
+    remaining.forEach(t => {
+      const a = first.get(t);
+      const b = last.get(t);
+      if(!a || !b) return;
+      const dx = a.left - b.left;
+      const dy = a.top  - b.top;
+      t.classList.add('flip');
+      t.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
 
-  animating = false;
+    await nextFrame();
+    remaining.forEach(t => { t.style.transform = "translate(0px,0px)"; });
 
-  if(found.every(Boolean)){
-    setMsg("Hepsi tamam! 🎉");
-    disableAll();
-    showResults(true);
-  }
-}
-
-  function createGhostFromTile(tile){
-    const g = document.createElement('div');
-    g.className = "ghost";
-    g.textContent = tile.dataset.word;
-
-    const tr = rect(tile);
-    const wr = rect(document.querySelector('.wrap'));
-
-    g.style.left = (tr.left - wr.left) + "px";
-    g.style.top  = (tr.top  - wr.top ) + "px";
-
-    ghostLayer.appendChild(g);
-    return g;
-  }
-
-  function moveGhostsToBar(ghosts, bar){
+    // Fly selected into bar (no scaling)
     const br = rect(bar);
-    const wr = rect(document.querySelector('.wrap'));
-
-    // Ghost size (same as tiles)
-    const gw = rect(ghosts[0]).width;
-    const gh = rect(ghosts[0]).height;
+    const gw = selFixedStart[0].width;
+    const gh = selFixedStart[0].height;
     const gap = parseFloat(getCss('--gap')) || 18;
 
-    // Targets: 4 across inside bar
     const totalW = 4*gw + 3*gap;
-    const startX = (br.left - wr.left) + (br.width - totalW)/2;
-    const y = (br.top - wr.top) + (br.height - gh)/2;
+    const startX = br.left + (br.width - totalW)/2;
+    const y = br.top + (br.height - gh)/2;
 
-    ghosts.forEach((g,i)=>{
-      const x0 = parseFloat(g.style.left);
-      const y0 = parseFloat(g.style.top);
-      const dx = (startX + i*(gw+gap)) - x0;
-      const dy = (y) - y0;
-      requestAnimationFrame(()=>{ g.style.transform = `translate(${dx}px, ${dy}px)`; });
+    selTiles.forEach((t,i)=>{
+      const r0 = selFixedStart[i];
+      const tx = (startX + i*(gw+gap)) - r0.left;
+      const ty = y - r0.top;
+      requestAnimationFrame(()=> {
+        t.style.transform = `translate(${tx}px, ${ty}px)`;
+      });
     });
+
+    await sleep(700);
+
+    // finalize
+    selTiles.forEach(t => t.remove());
+
+    bar.style.background = groupDef.color;
+    bar.querySelector('.barTitle').textContent = groupDef.label.toUpperCase();
+    bar.querySelector('.barWords').textContent = groupDef.items.map(x=>x.toUpperCase()).join(", ");
+    requestAnimationFrame(()=> bar.style.opacity = "1");
+
+    found[groupIndex] = true;
+    barSlot += 1;
+
+    setTimeout(()=> remaining.forEach(t => t.classList.remove('flip')), 350);
+
+    animating = false;
+
+    if(found.every(Boolean)){
+      setMsg("Hepsi tamam! 🎉");
+      disableAll();
+      showResults(true);
+    }
   }
+
+  // ---------- Results Modal (IIFE içinde olmalı) ----------
+  const overlay = document.getElementById("resultsOverlay");
+  const closeBtn = document.getElementById("closeResults");
+  const shareBtn = document.getElementById("shareBtn");
+
+  closeBtn.onclick = () => overlay.style.display = "none";
+  overlay.addEventListener("click", (e)=>{ if(e.target === overlay) overlay.style.display="none"; });
+
+  function showResults(won){
+    document.getElementById("resultsTitle").textContent = won ? "Nice!" : "Next Time!";
+    document.getElementById("statTries").textContent = String(tries);
+    document.getElementById("statMistakes").textContent = String(4 - mistakesLeft);
+    document.getElementById("statSolved").textContent = won ? "Solved" : "Missed";
+
+    const grid = document.getElementById("emojiGrid");
+    grid.innerHTML = "";
+    const rows = resultsLog.slice(0, 4);
+    rows.forEach(r => r.forEach(ch => {
+      const cell = document.createElement("div");
+      cell.textContent = ch;
+      grid.appendChild(cell);
+    }));
+
+    overlay.style.display = "block";
+  }
+
+  function buildShareText(won){
+    const puzzleNo = puzzle?.id ?? 1;
+    const header =
+`Connections TR
+Puzzle #${puzzleNo}
+${won ? "✅ Solved" : "❌ Missed"} (${4 - mistakesLeft} yanlış, ${tries} deneme)
+`;
+    const rows = resultsLog.slice(0, 4).map(r => r.join("")).join("\n");
+    return header + rows;
+  }
+
+  shareBtn.onclick = async () => {
+    const won = found.every(Boolean);
+    const text = buildShareText(won);
+
+    try{
+      if(navigator.share){
+        await navigator.share({ text });
+      }else{
+        await navigator.clipboard.writeText(text);
+        shareBtn.textContent = "Copied!";
+        setTimeout(()=> shareBtn.textContent = "Share Your Results", 900);
+      }
+    }catch(err){
+      try{
+        await navigator.clipboard.writeText(text);
+        shareBtn.textContent = "Copied!";
+        setTimeout(()=> shareBtn.textContent = "Share Your Results", 900);
+      }catch(_){
+        alert(text);
+      }
+    }
+  };
 
   // ---------- Utilities ----------
   function el(q){ return document.querySelector(q); }
@@ -581,64 +548,8 @@ async function animateSolve(groupIndex, groupDef){
 
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
   function nextFrame(){ return new Promise(r => requestAnimationFrame(()=>r())); }
+
 })();
-  
-  const overlay = document.getElementById("resultsOverlay");
-  const closeBtn = document.getElementById("closeResults");
-  const shareBtn = document.getElementById("shareBtn");
-
-  closeBtn.onclick = () => overlay.style.display = "none";
-  overlay.addEventListener("click", (e)=>{ if(e.target === overlay) overlay.style.display="none"; });
-
-  function showResults(won){
-    document.getElementById("resultsTitle").textContent = won ? "Nice!" : "Next Time!";
-    document.getElementById("statTries").textContent = String(tries);
-    document.getElementById("statMistakes").textContent = String(4 - mistakesLeft);
-    document.getElementById("statSolved").textContent = won ? "Solved" : "Missed";
-
-    // emoji grid (en fazla 4 satır göstermek istersen slice kullan)
-    const grid = document.getElementById("emojiGrid");
-    grid.innerHTML = "";
-    const rows = resultsLog.slice(0, 4); // NYT gibi 4 satır istiyorsan
-    rows.forEach(r => r.forEach(ch => {
-      const cell = document.createElement("div");
-      cell.textContent = ch;
-      grid.appendChild(cell);
-    }));
-
-    overlay.style.display = "block";
-  }
-
-  function buildShareText(won){
-    const puzzleNo = 1; // istersen JSON'a "id" koyup buraya basarsın
-    const header = `Connections TR\nPuzzle #${puzzleNo}\n${won ? "✅ Solved" : "❌ Missed"} (${4 - mistakesLeft} yanlış, ${tries} deneme)\n`;
-    const rows = resultsLog.slice(0, 4).map(r => r.join("")).join("\n");
-    return header + rows;
-  }
-
-  shareBtn.onclick = async () => {
-    const won = found.every(Boolean);
-    const text = buildShareText(won);
-
-    try{
-      if(navigator.share){
-        await navigator.share({ text });
-      }else{
-        await navigator.clipboard.writeText(text);
-        shareBtn.textContent = "Copied!";
-        setTimeout(()=> shareBtn.textContent = "Share Your Results", 900);
-      }
-    }catch(err){
-      // fallback
-      try{
-        await navigator.clipboard.writeText(text);
-        shareBtn.textContent = "Copied!";
-        setTimeout(()=> shareBtn.textContent = "Share Your Results", 900);
-      }catch(_){
-        alert(text); // en son çare
-      }
-    }
-  };
 </script>
 </body>
 </html>
