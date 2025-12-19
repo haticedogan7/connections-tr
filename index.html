@@ -78,9 +78,8 @@
 
     /* Mobile tweak */
     @media (max-width: 560px){
-      .grid{grid-template-columns: repeat(2, 1fr);}
-      .ghost{width: calc((min(880px, calc(100vw - 24px)) - 1*var(--gap))/2);}
-    }
+    .grid{grid-template-columns: repeat(4, 1fr);}
+  }
     /* Flying selected tiles (real tiles, not ghosts) */
   .floating{
     position: fixed !important;
@@ -96,6 +95,68 @@
   .bar{
     opacity: 1;
     transition: opacity 180ms ease;
+  }
+    /* ===== Mobile polish ===== */
+  @media (max-width: 560px){
+    .wrap{ width: calc(100vw - 16px); margin: 12px auto; }
+
+    .title{ font-size: 18px; }
+    .msg{ font-size: 18px; height: 26px; margin: 6px 0 10px; }
+
+    /* Keep 4 columns (NYT-like), shrink tiles */
+    .grid{
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    :root{
+      --gap: 10px;
+      --tileH: 56px;
+      --barH: 72px;
+      --radius: 12px;
+    }
+
+    .tile{
+      font-size: 13px;
+      border-radius: var(--radius);
+    }
+    .tile.selected{
+      border-width: 3px;
+    }
+
+    .bar{
+      border-radius: var(--radius);
+    }
+    .barTitle{ font-size: 16px; margin-top: 6px; }
+    .barWords{
+      font-size: 13px;
+      padding: 0 10px;
+      text-wrap: balance;
+    }
+
+    .mist{ font-size: 13px; }
+    .dot{ font-size: 20px; }
+
+    /* Buttons: stack nicely and be thumb-friendly */
+    .btnrow{
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn{
+      width: 100%;
+      max-width: 520px;
+      height: 52px;
+      font-size: 16px;
+    }
+  }
+
+  /* Slightly larger phones */
+  @media (min-width: 561px) and (max-width: 820px){
+    .wrap{ width: calc(100vw - 24px); }
+    .grid{ gap: 14px; }
+    :root{ --tileH: 68px; --barH: 78px; }
+    .tile{ font-size: 15px; }
+    .btn{ width: 200px; }
   }
   </style>
 </head>
