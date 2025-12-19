@@ -1,10 +1,10 @@
 {
   "date": "2025-12-19",
-  "words": ["GÖZ","EL","DİL","YÜZ","MANTI","BÖREK","PİDE","LAHMACUN","YAZ","YAZAR","YAZI","YAZMAK","KAR","KOR","KIL","KAL"],
+  "words": ["ORTAYA","YOLA","BAŞA","İŞTEN","AĞIR","DERİN","KESKİN","DÜZ","YAZ","YAZAR","YAZI","YAZMAK","KAR","KOR","KIL","KAL"],
   "groups": [
-    {"label":"VÜCUT/ORGAN","items":["GÖZ","EL","DİL","YÜZ"],"color":"yellow"},
-    {"label":"HAMUR İŞİ","items":["MANTI","BÖREK","PİDE","LAHMACUN"],"color":"green"},
-    {"label":"YAZ- KÖKÜ","items":["YAZ","YAZAR","YAZI","YAZMAK"],"color":"blue"},
-    {"label":"K_ R / K_ L","items":["KAR","KOR","KIL","KAL"],"color":"purple"}
+    {"label":"OKULDAKİ ÇEŞİTLİ İNSANLAR","items":["ÖĞRETMEN","ÖĞRENCİ","MÜDÜR","HADEME"],"color":"yellow"},
+    {"label":"... ÇIKMAK","items":["ORTAYA","YOLA","BAŞA","İŞTEN"],"color":"green"},
+    {"label":"HEM SOMUT HEM SOYUT","items":["AĞIR","DERİN","KESKİN","DÜZ"],"color":"blue"},
+    {"label":"NBA'E GİDEN TÜRK BASKETBOLCU SOYADLARI","items":["KORKMAZ","ŞENGÜN","OKUR","OSMAN"],"color":"purple"}
   ]
 }
