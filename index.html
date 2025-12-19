@@ -350,7 +350,8 @@
       if(mistakesLeft <= 0){
         setMsg("Bitti.");
         disableAll();
-        showResults(false);
+        revealRemaining();
+        setTimeout(()=>showResults(false),400);
       }
       return;
     }
@@ -366,6 +367,31 @@
     getAllTiles().forEach(t => t.style.pointerEvents = "none");
   }
 
+  function revealRemaining(){
+    // seçimi temizle
+    clearSelection();
+
+    // gridde kalan (açık) tile'ları kaldır
+    getOpenTiles().forEach(t => t.remove());
+
+    // bulunmayan grupları sırayla bar'lara bas
+    for(let i=0;i<puzzle.groups.length;i++){
+      if(found[i]) continue;
+
+      const g = puzzle.groups[i];
+      const bar = document.querySelector(`#bar-${barSlot}`);
+      if(!bar) break;
+
+      bar.style.display = "flex";
+      bar.style.background = g.color;
+      bar.style.opacity = "1";
+      bar.querySelector('.barTitle').textContent = g.label.toUpperCase();
+      bar.querySelector('.barWords').textContent = g.items.map(x=>x.toUpperCase()).join(", ");
+
+      found[i] = true;
+      barSlot += 1;
+    }
+  }
   // ---------- NYT-style animation (FLIP + fly) ----------
   async function animateSolve(groupIndex, groupDef){
     animating = true;
