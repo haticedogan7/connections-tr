@@ -1,5 +1,6 @@
 {
   "date": "2025-12-19",
+  "id": 1,
   "words": ["ORTAYA","YOLA","BAŞA","İŞTEN","AĞIR","DERİN","KESKİN","DÜZ","ÖĞRETMEN","ÖĞRENCİ","MÜDÜR","HADEME","KORKMAZ","ŞENGÜN","OKUR","OSMAN"],
   "groups": [
     {"label":"OKULDAKİ ÇEŞİTLİ İNSANLAR","items":["ÖĞRETMEN","ÖĞRENCİ","MÜDÜR","HADEME"],"color":"yellow"},
