@@ -81,6 +81,21 @@
       .grid{grid-template-columns: repeat(2, 1fr);}
       .ghost{width: calc((min(880px, calc(100vw - 24px)) - 1*var(--gap))/2);}
     }
+    /* Flying selected tiles (real tiles, not ghosts) */
+  .floating{
+    position: fixed !important;
+    margin: 0 !important;
+    z-index: 9999;
+    left: 0; top: 0;
+    width: 100px; height: 60px;
+    transition: transform 520ms var(--ease);
+  }
+
+  /* Smooth reflow (FLIP) */
+  .flip{
+    transition: transform 260ms var(--ease);
+    will-change: transform;
+  }
   </style>
 </head>
 
@@ -247,51 +262,111 @@
   }
 
   // ---------- NYT-style animation ----------
-  async function animateSolve(groupIndex, groupDef){
-    animating = true;
+async function animateSolve(groupIndex, groupDef){
+  animating = true;
 
-    const bar = el(`#bar-${barSlot}`);
+  const bar = el(`#bar-${barSlot}`);
 
-    // Selected tiles sorted by x (nice motion)
-    const selTiles = [...selected].sort((a,b)=> rect(a).left - rect(b).left);
+  // ---------- FIRST: ölç (griddeyken) ----------
+  const allTiles = getAllTiles(); // locked olmayanlar + selected dahil
+  const first = new Map();
+  allTiles.forEach(t => first.set(t, rect(t)));
 
-    // 1) Create ghosts at current positions (same size)
-    const ghosts = selTiles.map(t => createGhostFromTile(t));
+  // seçilenleri soldan sağa sırala
+  const selTiles = [...selected].sort((a,b)=> rect(a).left - rect(b).left);
 
-    // 2) Reflow grid FIRST (NYT): remove selected (grid collapses automatically)
-    selTiles.forEach(t => t.classList.add('locked'));
-    // clear selected styling (real tiles are disappearing anyway)
-    selTiles.forEach(t => t.classList.remove('selected'));
-    selected.clear();
+  // ---------- 1) Bar placeholder aç: grid aşağı insin ----------
+  bar.style.display = "flex";
+  bar.style.background = "#ffffff";
+  bar.querySelector('.barTitle').textContent = "";
+  bar.querySelector('.barWords').textContent = "";
 
-    // 3) Fly ghosts to bar target positions (no scaling)
-    bar.style.display = "flex";                 // reserve bar slot height
-    bar.style.background = "#ffffff";           // placeholder (invisible-ish)
-    bar.querySelector('.barTitle').textContent = "";
-    bar.querySelector('.barWords').textContent = "";
+  await nextFrame(); // bar görünür -> layout değişsin
 
-    await nextFrame(); // layout settle after reflow
+  // ---------- 2) Seçili tile'ları "uçan" moda al (KAYBOLMADAN) ----------
+  // Sabitle: mevcut ekrandaki pozisyonlarını fixed'e çevir
+  const selFixedStart = selTiles.map(t => {
+    const r = rect(t);
+    t.classList.add('floating');        // fixed olur
+    t.style.left = r.left + "px";
+    t.style.top  = r.top  + "px";
+    t.style.width  = r.width + "px";
+    t.style.height = r.height + "px";
+    t.style.transform = "translate(0px,0px)";
+    return r;
+  });
 
-    moveGhostsToBar(ghosts, bar);
+  // ---------- 3) Grid reflow: seçili tile'ların yerini boşalt ----------
+  // (gridde boşluk kalmasın diye gridden çıkarıyoruz ama kendileri fixed olduğu için görünmeye devam edecek)
+  selTiles.forEach(t => t.classList.add('locked'));
+  // artık selected set temizleyelim
+  selected.clear();
 
-    // wait flight
-    await sleep(560);
+  // ---------- LAST: reflow sonrası ölç ----------
+  await nextFrame(); // reflow gerçekleşsin
+  const remaining = getOpenTiles(); // locked olmayanlar
+  const last = new Map();
+  remaining.forEach(t => last.set(t, rect(t)));
 
-    // 4) Remove ghosts, then finalize big colored bar (NYT order)
-    ghosts.forEach(g => g.remove());
-    bar.style.background = groupDef.color;
-    bar.querySelector('.barTitle').textContent = groupDef.label.toUpperCase();
-    bar.querySelector('.barWords').textContent = groupDef.items.map(x=>x.toUpperCase()).join(", ");
+  // ---------- INVERT + PLAY (FLIP): kalan tile'lar smooth hareket etsin ----------
+  remaining.forEach(t => {
+    const a = first.get(t);
+    const b = last.get(t);
+    if(!a || !b) return;
+    const dx = a.left - b.left;
+    const dy = a.top  - b.top;
+    t.classList.add('flip');
+    t.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
 
-    found[groupIndex] = true;
-    barSlot += 1;
-    animating = false;
+  // transform’u 1 frame sonra sıfırla -> animasyon başlar
+  await nextFrame();
+  remaining.forEach(t => { t.style.transform = "translate(0px,0px)"; });
 
-    if(found.every(Boolean)){
-      setMsg("Hepsi tamam! 🎉");
-      disableAll();
-    }
+  // ---------- 4) Seçili tile'ları bar içine uçur (no scale) ----------
+  const br = rect(bar);
+  const gw = selFixedStart[0].width;
+  const gh = selFixedStart[0].height;
+  const gap = parseFloat(getCss('--gap')) || 18;
+
+  const totalW = 4*gw + 3*gap;
+  const startX = br.left + (br.width - totalW)/2;
+  const y = br.top + (br.height - gh)/2;
+
+  selTiles.forEach((t,i)=>{
+    const r0 = selFixedStart[i];
+    const tx = (startX + i*(gw+gap)) - r0.left;
+    const ty = y - r0.top;
+    requestAnimationFrame(()=> {
+      t.style.transform = `translate(${tx}px, ${ty}px)`;
+    });
+  });
+
+  // uçuş bitsin
+  await sleep(560);
+
+  // ---------- 5) Seçili tile'ları tamamen kaldır + barı finalize et ----------
+  selTiles.forEach(t => t.remove());
+
+  bar.style.background = groupDef.color;
+  bar.querySelector('.barTitle').textContent = groupDef.label.toUpperCase();
+  bar.querySelector('.barWords').textContent = groupDef.items.map(x=>x.toUpperCase()).join(", ");
+
+  found[groupIndex] = true;
+  barSlot += 1;
+
+  // cleanup: flip class’ları bir süre sonra temizle (istersen kalsın da olur)
+  setTimeout(()=>{
+    remaining.forEach(t => t.classList.remove('flip'));
+  }, 300);
+
+  animating = false;
+
+  if(found.every(Boolean)){
+    setMsg("Hepsi tamam! 🎉");
+    disableAll();
   }
+}
 
   function createGhostFromTile(tile){
     const g = document.createElement('div');
