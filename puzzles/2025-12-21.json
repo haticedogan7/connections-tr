@@ -1,0 +1,11 @@
+{
+  "date": "2025-12-21",
+  "id": 3,
+  "words": ["RAHİP","HAHAM","İMAM","MOBAD","AS","VALE","PAPAZ","KIZ","YAPIT","ROL","KAN","KENT","PASAPORT","EHLİYET","KİMLİK","RUHSAT"],
+  "groups": [
+    {"label":"İSKAMBİL KARTLARI","items":["AS","VALE","PAPAZ","KIZ"],"color":"yellow"},
+    {"label":"RESMİ BELGELER","items":["PASAPORT","EHLİYET","KİMLİK","RUHSAT"],"color":"green"},
+    {"label":"DİN ADAMLARI","items":["RAHİP","HAHAM","İMAM","MOBAD"],"color":"blue"},
+    {"label":"BAŞ...","items":["YAPIT","ROL","KAN","KENT"],"color":"purple"}
+  ]
+}
