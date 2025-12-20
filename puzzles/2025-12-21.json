@@ -1,1 +1,12 @@
+{
+  "date": "2025-12-20",
+  "id": 2,
+  "words": ["YÖNELME","BELİRTME","AYRILMA","BULUNMA","MAGAZİN","MANŞET","ÇENGEL BULMACA","İLAN","NOTA","ES","ANAHTAR","PORTE","PERDE","HESAP","FAL","DOSYA"],
+  "groups": [
+    {"label":"DURUM EKLERİ","items":["YÖNELME","BELİRTME","AYRILMA","BULUNMA"],"color":"yellow"},
+    {"label":"GAZETEDEKİ BÖLÜMLER","items":["MAGAZİN","MANŞET","ÇENGEL BULMACA","İLAN"],"color":"green"},
+    {"label":"MÜZİK YAZIMI TERİMLERİ","items":["NOTA","ES","ANAHTAR","PORTE"],"color":"blue"},
+    {"label":"AÇILAN ŞEYLER","items":["PERDE","HESAP","FAL","DOSYA"],"color":"purple"}
+  ]
+}
 
