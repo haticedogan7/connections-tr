@@ -135,7 +135,7 @@
     /* ===== Start Screen ===== */
   .startScreen{
     position:fixed; inset:0;
-    background: var(--purple);
+    background: var(--bg);
     display:flex; align-items:center; justify-content:center;
     padding: 24px;
     z-index: 99999;
@@ -338,7 +338,7 @@
     // ✅ Start screen metalarını doldur
     document.getElementById("startDate").textContent = dateTRPretty(today);
     document.getElementById("startNo").textContent   = "No. " + (puzzle.id ?? "—");
-    document.getElementById("startBy").textContent   = "By Hatice Doğan";
+    document.getElementById("starbBy").textContent   = "by Hatice Doğan";
 
     
     renderGrid(shuffle([...puzzle.words]));
