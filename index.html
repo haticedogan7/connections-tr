@@ -291,9 +291,9 @@
   const barsEl = el('#bars');
   const dotsEl = el('#dots');
 
-  const btnShuffle = el('#shuffle');
-  const btnSubmit  = el('#submit');
-  const btnClear   = el('#clear');
+  const btnKarıştır = el('#shuffle');
+  const btnGönder  = el('#submit');
+  const btnSeçimiKaldır   = el('#clear');
   const btnPlay = document.getElementById("btnPlay");
   const btnViewResults = document.getElementById("viewResultsBtn");
 
@@ -371,9 +371,9 @@
     
     renderGrid(shuffle([...puzzle.words]));
 
-    btnShuffle.onclick = () => !animating && shuffleOpen();
-    btnClear.onclick   = () => !animating && clearSelection();
-    btnSubmit.onclick  = () => !animating && submit();
+    btnKarıştır.onclick = () => !animating && shuffleOpen();
+    btnSeçimiKaldır.onclick   = () => !animating && clearSelection();
+    btnGönder.onclick  = () => !animating && submit();
     btnViewResults.onclick = () => showResults(found.every(Boolean));
   })();
 
@@ -512,9 +512,9 @@
   }
 
   function disableAll(){
-    btnShuffle.disabled = true;
-    btnSubmit.disabled  = true;
-    btnClear.disabled   = true;
+    btnKarıştır.disabled = true;
+    btnGönder.disabled  = true;
+    btnSeçimiKaldır.disabled   = true;
     getAllTiles().forEach(t => t.style.pointerEvents = "none");
   }
 
