@@ -220,7 +220,7 @@
       <div class="startTitle">Dört Dörtlük</div>
       <div class="startSubtitle">Ortak bir bağlantısı olan kelimeleri dörderli gruplara ayır.</div>
 
-      <button id="btnPlay" class="startPlay" onclick="alert('tıklandı')">Oyna</button>
+      <button id="btnPlay" class="startPlay">Oyna</button>
 
       <div class="startMeta">
         <div id="startDate">—</div>
@@ -290,6 +290,24 @@
   const btnPlay = document.getElementById("btnPlay");
   const btnViewResults = document.getElementById("viewResultsBtn");
 
+  btnPlay.addEventListener("click", () => {
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    // Puzzle henüz yüklenmediyse:
+    if(!puzzle){
+      setMsg("Yükleniyor... 1 sn sonra tekrar dene.");
+      return;
+    }
+
+    // Günlük 1 kez oynama kontrolü
+    if(todayKey && localStorage.getItem(todayKey)){
+      setMsg("Bugünkü bulmacayı zaten oynadın.");
+      disableAll();
+      btnViewResults.style.display = "block";
+    }
+  });
+
   const MAX_SHARE_ROWS = 8;
   
   // ---------- Load puzzle from JSON ----------
@@ -347,17 +365,6 @@
     btnClear.onclick   = () => !animating && clearSelection();
     btnSubmit.onclick  = () => !animating && submit();
     btnViewResults.onclick = () => showResults(found.every(Boolean));
-    btnPlay.onclick = () => {
-    document.getElementById("startScreen").style.display = "none";
-    document.getElementById("gameScreen").style.display = "block";
-
-    if(localStorage.getItem(todayKey)){
-      setMsg("Bugünkü bulmacayı zaten oynadın.");
-      disableAll();
-      btnViewResults.style.display = "block";
-      return;
-    }
-  };
   })();
 
   // ---------- Rendering ----------
