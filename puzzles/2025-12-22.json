@@ -6,6 +6,6 @@
     {"label":"HIRDAVAT MALZEMELERİ","items":["VİDA","CIVATA","PUL","SOMUN"],"color":"green"},
     {"label":"EKMEK ÇEŞİTLERİ","items":["PİDE","LAVAŞ","BAGET","BAZLAMA"],"color":"yellow"},
     {"label":"KEMİKLİ BALIK ANATOMİSİ","items":["YÜZGEÇ","SOLUNGAÇ","YÜZME KESESİ","OMURGA"],"color":"blue"},
-    {"label":""KULAK" İLE İLGİLİ DEYİMLERDEKİ DİĞER UNSURLAR","items":["DEVE","BOYNUZ","KÜPE","MİSAFİR"],"color":"purple"}
+    {"label":"KULAK İLE İLGİLİ DEYİMLERDEKİ DİĞER UNSURLAR","items":["DEVE","BOYNUZ","KÜPE","MİSAFİR"],"color":"purple"}
   ]
 }
