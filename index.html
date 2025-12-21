@@ -366,7 +366,7 @@
     // ✅ Start screen metalarını doldur
     document.getElementById("startDate").textContent = dateTRPretty(today);
     document.getElementById("startNo").textContent   = "No. " + (puzzle.id ?? "—");
-    document.getElementById("starbBy").textContent   = "by Hatice Doğan";
+    document.getElementById("startby").textContent   = "by Hatice Doğan";
 
     
     renderGrid(shuffle([...puzzle.words]));
