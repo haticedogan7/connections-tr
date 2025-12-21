@@ -155,8 +155,10 @@
   .startLogo{
     width:64px; height:64px;
     border-radius:14px;
-    background: rgba(255,255,255,.35);
+    display:block;
     margin: 0 auto 14px;
+    object-fit:cover;
+    background: rgba(255,255,255,.35);
     border: 2px solid rgba(0,0,0,.12);
   }
   .startTitle{
@@ -222,7 +224,7 @@
   <!-- ===== Start Screen ===== -->
   <div id="startScreen" class="startScreen">
     <div class="startCard">
-      <div class="startLogo" aria-label="logo placeholder"></div>
+      <img class="startLogo" src="logo.png" alt="Dört Dörtlük">
 
       <div class="startTitle">Dört Dörtlük</div>
       <div class="startSubtitle">Ortak bir bağlantısı olan kelimeleri dörderli gruplara ayır.</div>
