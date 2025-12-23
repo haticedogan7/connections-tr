@@ -5,7 +5,7 @@
   "groups": [
     {"label":"SATRANÇ TAŞLARI","items":["AT","FİL","KALE","PİYON"],"color":"yellow"},
     {"label":"SAVUNMA YAPILARI","items":["TABYA","HİSAR","BURÇ","KULE"],"color":"green"},
-    {"label":"ESKİ TÜRK DEVLETLERİNDE HÜKÜMDAR ÜNVANLARI","items":["TABYA","HİSAR","BURÇ","KULE"],"color":"blue"},
+    {"label":"ESKİ TÜRK DEVLETLERİNDE HÜKÜMDAR ÜNVANLARI","items":["KAĞAN","SULTAN","ŞAH","HAN"],"color":"blue"},
     {"label":"DEMİR...","items":["HİNDİ","YOLU","BAŞ","PERDE"],"color":"purple"}
   ]
 }
