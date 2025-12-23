@@ -1,0 +1,11 @@
+{
+  "date": "2025-12-24",
+  "id": 5,
+  "words": ["HİNDİ","YOLU","BAŞ","PERDE","AT","FİL","KALE","PİYON","TABYA","HİSAR","BURÇ","KULE","KAĞAN","SULTAN","ŞAH","HAN"],
+  "groups": [
+    {"label":"SATRANÇ TAŞLARI","items":["AT","FİL","KALE","PİYON"],"color":"yellow"},
+    {"label":"SAVUNMA YAPILARI","items":["TABYA","HİSAR","BURÇ","KULE"],"color":"green"},
+    {"label":"ESKİ TÜRK DEVLETLERİNDE HÜKÜMDAR ÜNVANLARI","items":["TABYA","HİSAR","BURÇ","KULE"],"color":"blue"},
+    {"label":"DEMİR...","items":["HİNDİ","YOLU","BAŞ","PERDE"],"color":"purple"}
+  ]
+}
